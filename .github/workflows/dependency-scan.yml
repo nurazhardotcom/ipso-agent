@@ -1,0 +1,39 @@
+name: Dependency Vulnerability Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # every Monday 6am
+  workflow_dispatch:
+
+jobs:
+  nvd-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@12.5
+        with:
+          clj: 'latest'
+          bb: 'latest'
+
+      - name: Run nvd-clojure scan
+        run: |
+          clojure -M -m nvd-clojure.nvd-clojure \
+            nvd-clojure.nvd-clojure/check \
+            :classpath-file classpath.txt \
+            :report-dir target/nvd-report \
+            :suppression-file nvd-suppressions.xml
+        continue-on-error: true
+
+      - name: Upload NVD report
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvd-report-${{ github.repository_owner }}
+          path: target/nvd-report
